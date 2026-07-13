@@ -16,9 +16,11 @@ workflows:
         script: npm install -g pnpm --force
       - name: Instalar dependencias
         script: |
-          # Borramos la restricción de Yarn del package.json usando Node
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); delete pkg.packageManager; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-          # Ahora pnpm instalará todo sin protestar
+          # Eliminamos rastros de otros lockfiles por si acaso
+          rm -f yarn.lock package-lock.json
+          # Forzamos a pnpm a ignorar la restricción de "packageManager"
+          pnpm config set package-manager-strict false
+          # Instalamos de forma normal
           pnpm install
       - name: Generar carpetas nativas (Expo Prebuild)
         script: npx expo prebuild --platform android
