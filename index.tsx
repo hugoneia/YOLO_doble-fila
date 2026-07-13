@@ -1,6 +1,6 @@
 import { Text, View, TouchableOpacity, StyleSheet, ScrollView, Platform } from "react-native";
 import { Camera } from "react-native-vision-camera";
-import { useCamera } from "../../src/hooks/useCamera";
+import { useCamera } from "./useCamera";
 
 export default function HomeScreen() {
   const { 
