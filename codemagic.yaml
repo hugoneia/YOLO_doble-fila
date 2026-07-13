@@ -13,9 +13,9 @@ workflows:
         - pattern: '*'
     scripts:
       - name: Instalar pnpm
-        script: npm install -g pnpm --force # <- Añadido --force para saltar el error
+        script: npm install -g pnpm --force
       - name: Instalar dependencias
-        script: pnpm install
+        script: pnpm install --ignore-package-manager # <- Forzamos a pnpm a ignorar la configuración de yarn
       - name: Generar carpetas nativas (Expo Prebuild)
         script: npx expo prebuild --platform android
       - name: Compilar APK de producción (Release)
@@ -27,7 +27,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - mrpulu.party@gmail.com # <- Recuerda cambiar esto por tu correo
+          - mrpulu.party@gmail.com # <- Cambia esto por tu correo
         notify:
           success: true
           failure: true
