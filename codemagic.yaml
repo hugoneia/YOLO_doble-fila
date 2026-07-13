@@ -55,6 +55,16 @@ workflows:
           # 6b. Forzar versión estable de AndroidX CameraX (evita alphas que requieren API 36)
           echo "🛠️ Parcheando build.gradle para fijar CameraX en versión estable..."
           cat << 'EOF' >> android/build.gradle
+          subprojects {
+              configurations.all {
+                  resolutionStrategy.eachDependency { details ->
+                      if (details.requested.group == 'androidx.camera') {
+                          details.useVersion '1.4.0'
+                      }
+                  }
+              }
+          }
+          EOF
 
 subprojects {
     configurations.all {
