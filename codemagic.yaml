@@ -14,21 +14,25 @@ workflows:
     scripts:
       - name: Configurar Entorno y Compilar APK
         script: |
-          # 1. Crear el script fantasma de MANUS para que 'app.config.ts' no falle
+          # 1. Crear el script fantasma de MANUS para evitar fallos en app.config.ts[cite: 1]
           echo "🔧 Creando scripts de entorno faltantes..."
           mkdir -p scripts
           echo "// Archivo temporal para bypass de compilación" > scripts/load-env.js
           
-          # 2. Instalar las dependencias con Yarn 4
+          # 2. Forzar a Yarn 4 a entender que este es el nodo raíz del proyecto
+          echo "🔒 Aislando el entorno de Yarn 4..."
+          touch yarn.lock
+          
+          # 3. Instalar las dependencias
           echo "📦 Instalando dependencias del proyecto..."
           corepack enable
           yarn install --no-immutable
           
-          # 3. Generar la estructura nativa de Android
+          # 4. Generar la estructura nativa de Android
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 4. Compilar el APK definitivo
+          # 5. Compilar el APK definitivo
           echo "🤖 Compilando APK con Gradle..."
           cd android
           ./gradlew assembleRelease
