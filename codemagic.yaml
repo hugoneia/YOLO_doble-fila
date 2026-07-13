@@ -14,22 +14,41 @@ workflows:
     scripts:
       - name: Instalar dependencias con Yarn
         script: |
-          # Habilitamos corepack para asegurar la versión de Yarn
+          # Detectar automáticamente la carpeta que contiene el proyecto
+          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
+          echo "Proyecto detectado en la ruta: $REPO_DIR"
+          cd "$REPO_DIR"
+          
+          # Ejecutar instalación limpia
           corepack enable
-          # Permitimos explícitamente que Yarn cree el lockfile en el servidor
           yarn install --no-immutable
+          
       - name: Generar carpetas nativas (Expo Prebuild)
-        script: npx expo prebuild --platform android
+        script: |
+          # Detectar ruta e ingresar
+          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
+          cd "$REPO_DIR"
+          
+          npx expo prebuild --platform android
+          
       - name: Compilar APK de producción (Release)
         script: |
+          # Detectar ruta e ingresar
+          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
+          cd "$REPO_DIR"
+          
+          # Compilar de forma nativa
           cd android
           ./gradlew assembleRelease
+          
     artifacts:
-      - android/app/build/outputs/apk/release/*.apk
+      # Buscamos el APK usando un patrón universal (**/) para que lo encuentre en cualquier subcarpeta
+      - "**/android/app/build/outputs/apk/release/*.apk"
+      
     publishing:
       email:
         recipients:
-          - tu-email@ejemplo.com # <- Cambia esto por tu correo
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo para recibir el aviso
         notify:
           success: true
           failure: true
