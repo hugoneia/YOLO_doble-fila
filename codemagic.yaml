@@ -2,7 +2,7 @@ workflows:
   android-apk-build:
     name: Traffic Monitor APK Build
     max_build_duration: 60
-    instance_type: mac_mini_m1 # <- Cambiado a la máquina Mac M1 (disponible en el plan gratuito)
+    instance_type: mac_mini_m1
     environment:
       node: 20
       java: 17
@@ -13,7 +13,7 @@ workflows:
         - pattern: '*'
     scripts:
       - name: Instalar pnpm
-        script: npm install -g pnpm
+        script: npm install -g pnpm --force # <- Añadido --force para saltar el error
       - name: Instalar dependencias
         script: pnpm install
       - name: Generar carpetas nativas (Expo Prebuild)
