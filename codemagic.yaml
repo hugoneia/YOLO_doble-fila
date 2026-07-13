@@ -14,10 +14,10 @@ workflows:
     scripts:
       - name: Instalar dependencias con Yarn
         script: |
-          # Habilitamos corepack por si requiere una versión específica de yarn
+          # Habilitamos corepack para asegurar la versión de Yarn
           corepack enable
-          # Instalamos las dependencias
-          yarn install
+          # Permitimos explícitamente que Yarn cree el lockfile en el servidor
+          yarn install --no-immutable
       - name: Generar carpetas nativas (Expo Prebuild)
         script: npx expo prebuild --platform android
       - name: Compilar APK de producción (Release)
