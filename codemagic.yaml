@@ -54,28 +54,15 @@ workflows:
           
           # 6b. Forzar versión estable de AndroidX CameraX (evita alphas que requieren API 36)
           echo "🛠️ Parcheando build.gradle para fijar CameraX en versión estable..."
-          cat << 'EOF' >> android/build.gradle
-          subprojects {
-              configurations.all {
-                  resolutionStrategy.eachDependency { details ->
-                      if (details.requested.group == 'androidx.camera') {
-                          details.useVersion '1.4.0'
-                      }
-                  }
-              }
-          }
-          EOF
-
-subprojects {
-    configurations.all {
-        resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == 'androidx.camera') {
-                details.useVersion '1.4.0'
-            }
-        }
-    }
-}
-EOF
+          echo "subprojects {" >> android/build.gradle
+          echo "    configurations.all {" >> android/build.gradle
+          echo "        resolutionStrategy.eachDependency { details ->" >> android/build.gradle
+          echo "            if (details.requested.group == 'androidx.camera') {" >> android/build.gradle
+          echo "                details.useVersion '1.4.0'" >> android/build.gradle
+          echo "            }" >> android/build.gradle
+          echo "        }" >> android/build.gradle
+          echo "    }" >> android/build.gradle
+          echo "}" >> android/build.gradle
           
           # 7. Compilar el APK definitivo
           echo "🤖 Compilando APK con Gradle..."
@@ -88,7 +75,7 @@ EOF
     publishing:
       email:
         recipients:
-          - tu-email@ejemplo.com # <- Cambia esto por tu correo real
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo real si quieres recibir avisos
         notify:
           success: true
           failure: true
