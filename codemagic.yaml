@@ -12,47 +12,39 @@ workflows:
       branch_patterns:
         - pattern: '*'
     scripts:
-      - name: Instalar dependencias con Yarn
+      - name: Procesar y Compilar APK (Flujo Unificado)
         script: |
-          # Detectar automáticamente la carpeta que contiene el proyecto
+          # 1. Detectar la carpeta real del proyecto antes de generar archivos de caché
           REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          echo "Proyecto detectado en la ruta: $REPO_DIR"
+          echo "🚀 Proyecto detectado con éxito en la ruta: $REPO_DIR"
           cd "$REPO_DIR"
           
-          # Ejecutar instalación limpia
+          # 2. Instalar dependencias con Yarn 4
+          echo "📦 Instalando dependencias..."
           corepack enable
           yarn install --no-immutable
           
-      - name: Generar carpetas nativas (Expo Prebuild)
-        script: |
-          # Detectar ruta e ingresar
-          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          cd "$REPO_DIR"
-          
-          # TRUCO: Inyectamos el script "expo" dinámicamente en el package.json para engañar a Yarn 4
+          # 3. Inyectar el script 'expo' exigido por Yarn 4
+          echo "🔧 Aplicando parche de compatibilidad para Yarn 4..."
           node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.scripts = pkg.scripts || {}; pkg.scripts.expo = 'expo'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
           
-          # Ahora Yarn 4 aceptará el comando sin quejarse
-          corepack enable
+          # 4. Generar las carpetas nativas de Android (Expo Prebuild)
+          echo "🏗️ Generando estructura nativa de Android..."
           yarn run expo prebuild --platform android
           
-      - name: Compilar APK de producción (Release)
-        script: |
-          # Detectar ruta e ingresar
-          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          cd "$REPO_DIR"
-          
-          # Compilar de forma nativa ingresando a la carpeta android generada
+          # 5. Compilar el APK de producción con Gradle
+          echo "🤖 Compilando el archivo APK final..."
           cd android
           ./gradlew assembleRelease
           
     artifacts:
+      # Buscador universal para capturar el APK final esté en la subcarpeta que esté
       - "**/android/app/build/outputs/apk/release/*.apk"
       
     publishing:
       email:
         recipients:
-          - tu-email@ejemplo.com # <- Cambia esto por tu correo para recibir el APK
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo para recibir el enlace del APK
         notify:
           success: true
           failure: true
