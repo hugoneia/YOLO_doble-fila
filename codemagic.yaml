@@ -19,20 +19,25 @@ workflows:
           mkdir -p scripts
           echo "// Archivo temporal para bypass de compilación" > scripts/load-env.js
           
-          # 2. Forzar a Yarn 4 a entender que este es el nodo raíz del proyecto
-          echo "🔒 Aislando el entorno de Yarn 4..."
+          # 2. Configurar Yarn 4 para usar el modo tradicional node_modules
+          echo "🔒 Configurando entorno de Yarn 4..."
+          corepack enable
+          yarn config set nodeLinker node-modules
           touch yarn.lock
           
-          # 3. Instalar las dependencias
-          echo "📦 Instalando dependencias del proyecto..."
-          corepack enable
+          # 3. Instalar las dependencias iniciales
+          echo "📦 Instalando dependencias básicas..."
           yarn install --no-immutable
           
-          # 4. Generar la estructura nativa de Android
+          # 4. Ajustar automáticamente las versiones al ecosistema Expo 52
+          echo "⚙️ Optimizando y fijando versiones compatibles con Expo..."
+          yarn expo install --check
+          
+          # 5. Generar la estructura nativa de Android
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 5. Compilar el APK definitivo
+          # 6. Compilar el APK definitivo
           echo "🤖 Compilando APK con Gradle..."
           cd android
           ./gradlew assembleRelease
