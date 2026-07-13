@@ -12,44 +12,34 @@ workflows:
       branch_patterns:
         - pattern: '*'
     scripts:
-      - name: Diagnóstico y Compilación (Flujo Unificado)
+      - name: Configurar Entorno y Compilar APK
         script: |
-          # 1. DIAGNÓSTICO: Ver qué archivos se han clonado realmente de GitHub
-          echo "📂 Lista de archivos detectados en la raíz de tu GitHub:"
-          ls -la
-          echo "----------------------------------------------------"
-          echo "📂 Buscando todos los archivos package.json disponibles:"
-          find . -name package.json
-          echo "----------------------------------------------------"
+          # 1. Crear el script fantasma de MANUS para que 'app.config.ts' no falle
+          echo "🔧 Creando scripts de entorno faltantes..."
+          mkdir -p scripts
+          echo "// Archivo temporal para bypass de compilación" > scripts/load-env.js
           
-          # 2. Detectar la carpeta real del proyecto
-          REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          echo "🚀 Proyecto detectado con éxito en la ruta: $REPO_DIR"
-          
-          if [ -z "$REPO_DIR" ]; then
-            echo "❌ ERROR CRÍTICO: No se encuentra ningún package.json en este repositorio. Revisa tu GitHub."
-            exit 1
-          fi
-          
-          cd "$REPO_DIR"
-          
-          # 3. Instalar dependencias con Yarn 4
-          echo "📦 Instalando dependencias..."
+          # 2. Instalar las dependencias con Yarn 4
+          echo "📦 Instalando dependencias del proyecto..."
           corepack enable
           yarn install --no-immutable
           
-          # 4. Inyectar el script 'expo' exigido por Yarn 4
-          echo "🔧 Aplicando parche de compatibilidad para Yarn 4..."
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.scripts = pkg.scripts || {}; pkg.scripts.expo = 'expo'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-          
-          # 5. Generar las carpetas nativas de Android (Expo Prebuild)
-          echo "🏗️ Generando estructura nativa de Android..."
+          # 3. Generar la estructura nativa de Android
+          echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6. Compilar el APK de producción con Gradle
-          echo "🤖 Compilando el archivo APK final..."
+          # 4. Compilar el APK definitivo
+          echo "🤖 Compilando APK con Gradle..."
           cd android
           ./gradlew assembleRelease
           
     artifacts:
-      - "**/android/app/build/outputs/apk/release/*.apk"
+      - android/app/build/outputs/apk/release/*.apk
+      
+    publishing:
+      email:
+        recipients:
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo real
+        notify:
+          success: true
+          failure: true
