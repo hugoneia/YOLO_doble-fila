@@ -12,16 +12,12 @@ workflows:
       branch_patterns:
         - pattern: '*'
     scripts:
-      - name: Instalar pnpm
-        script: npm install -g pnpm --force
-      - name: Instalar dependencias
+      - name: Instalar dependencias con Yarn
         script: |
-          # Eliminamos rastros de otros lockfiles por si acaso
-          rm -f yarn.lock package-lock.json
-          # Forzamos a pnpm a ignorar la restricción de "packageManager"
-          pnpm config set package-manager-strict false
-          # Instalamos de forma normal
-          pnpm install
+          # Habilitamos corepack por si requiere una versión específica de yarn
+          corepack enable
+          # Instalamos las dependencias
+          yarn install
       - name: Generar carpetas nativas (Expo Prebuild)
         script: npx expo prebuild --platform android
       - name: Compilar APK de producción (Release)
@@ -33,7 +29,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - mrpulu.party@gmail.com # <- Cambia esto por tu correo
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo
         notify:
           success: true
           failure: true
