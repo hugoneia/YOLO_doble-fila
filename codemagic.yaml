@@ -29,7 +29,10 @@ workflows:
           REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
           cd "$REPO_DIR"
           
-          # Añadimos 'run' para que Yarn 4 ejecute el binario local correctamente
+          # TRUCO: Inyectamos el script "expo" dinámicamente en el package.json para engañar a Yarn 4
+          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.scripts = pkg.scripts || {}; pkg.scripts.expo = 'expo'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+          
+          # Ahora Yarn 4 aceptará el comando sin quejarse
           corepack enable
           yarn run expo prebuild --platform android
           
@@ -49,8 +52,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - mrpulu.party@gmail.com # <- Cambia esto por tu correo para recibir el APK
+          - tu-email@ejemplo.com # <- Cambia esto por tu correo para recibir el APK
         notify:
           success: true
           failure: true
-
