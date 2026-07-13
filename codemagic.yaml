@@ -25,11 +25,11 @@ workflows:
           yarn config set nodeLinker node-modules
           touch yarn.lock
           
-          # 3. Instalar las dependencias exactas (incluyendo Nitro Modules)
+          # 3. Instalar las dependencias exactas y el plugin de Babel
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 4. Inyectar placeholders de imágenes (Foreground, Background e Iconos base)
+          # 4. Inyectar placeholders de imágenes (incluido el icono monocromático)
           echo "🖼️ Asegurando recursos visuales mínimos para el Prebuild..."
           node -e "
           const fs = require('fs');
@@ -37,6 +37,7 @@ workflows:
           const dummyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
           fs.writeFileSync('assets/images/android-icon-foreground.png', dummyPng);
           fs.writeFileSync('assets/images/android-icon-background.png', dummyPng);
+          fs.writeFileSync('assets/images/android-icon-monochrome.png', dummyPng);
           fs.writeFileSync('assets/images/adaptive-icon.png', dummyPng);
           fs.writeFileSync('assets/icon.png', dummyPng);
           "
