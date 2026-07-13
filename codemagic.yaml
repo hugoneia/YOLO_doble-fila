@@ -29,11 +29,12 @@ workflows:
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 4. Forzar la instalación del compilador de React directamente en el entorno de build
-          echo "⚛️ Forzando instalación de babel-plugin-react-compiler..."
+          # 4. Forzar la instalación del compilador de React y su runtime en el entorno de build
+          echo "⚛️ Forzando instalación de dependencias de React Compiler..."
           yarn add -D babel-plugin-react-compiler
+          yarn add react-compiler-runtime
           
-          # 5. Inyectar todos los assets visuales requeridos por el esquema de Android
+          # 5. Inyectar todos los assets visuales requeridos (incluido el splash-icon)
           echo "🖼️ Asegurando recursos visuales mínimos para el Prebuild..."
           node -e "
           const fs = require('fs');
@@ -42,6 +43,7 @@ workflows:
           fs.writeFileSync('assets/images/android-icon-foreground.png', dummyPng);
           fs.writeFileSync('assets/images/android-icon-background.png', dummyPng);
           fs.writeFileSync('assets/images/android-icon-monochrome.png', dummyPng);
+          fs.writeFileSync('assets/images/splash-icon.png', dummyPng);
           fs.writeFileSync('assets/images/adaptive-icon.png', dummyPng);
           fs.writeFileSync('assets/icon.png', dummyPng);
           "
