@@ -14,7 +14,7 @@ workflows:
     scripts:
       - name: Configurar Entorno y Compilar APK
         script: |
-          # 1. Crear el script fantasma de MANUS para evitar fallos en app.config.ts[cite: 1]
+          # 1. Crear el script fantasma de MANUS para evitar fallos en app.config.ts
           echo "🔧 Creando scripts de entorno faltantes..."
           mkdir -p scripts
           echo "// Archivo temporal para bypass de compilación" > scripts/load-env.js
@@ -51,6 +51,21 @@ workflows:
           # 6. Generar la estructura nativa de Android de forma limpia
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
+          
+          # 6b. Forzar versión estable de AndroidX CameraX (evita alphas que requieren API 36)
+          echo "🛠️ Parcheando build.gradle para fijar CameraX en versión estable..."
+          cat << 'EOF' >> android/build.gradle
+
+subprojects {
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.camera') {
+                details.useVersion '1.4.0'
+            }
+        }
+    }
+}
+EOF
           
           # 7. Compilar el APK definitivo
           echo "🤖 Compilando APK con Gradle..."
