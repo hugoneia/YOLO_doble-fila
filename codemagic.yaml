@@ -29,9 +29,9 @@ workflows:
           REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
           cd "$REPO_DIR"
           
-          # Usamos 'yarn expo' en lugar de 'npx' para mantener el contexto de Yarn 4
+          # Añadimos 'run' para que Yarn 4 ejecute el binario local correctamente
           corepack enable
-          yarn expo prebuild --platform android
+          yarn run expo prebuild --platform android
           
       - name: Compilar APK de producción (Release)
         script: |
@@ -39,7 +39,7 @@ workflows:
           REPO_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
           cd "$REPO_DIR"
           
-          # Compilar de forma nativa
+          # Compilar de forma nativa ingresando a la carpeta android generada
           cd android
           ./gradlew assembleRelease
           
@@ -53,3 +53,4 @@ workflows:
         notify:
           success: true
           failure: true
+
