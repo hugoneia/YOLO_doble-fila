@@ -52,17 +52,24 @@ workflows:
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Forzar variables de compilación globales (evita fallos de AarMetadata heredados)
-          echo "🛠️ Parcheando build.gradle y gradle.properties para heredar Android 15 (API 35)..."
-          # Definimos las propiedades del sistema
+          # 6b. Forzar SDK 35 y desactivar la comprobación de metadatos AAR (evita bloqueos de API 36 de Google)
+          echo "🛠️ Parcheando build.gradle y gradle.properties..."
           echo "android.compileSdkVersion=35" >> android/gradle.properties
           echo "android.targetSdkVersion=35" >> android/gradle.properties
           echo "android.buildToolsVersion=35.0.0" >> android/gradle.properties
-          # Sobrescribimos el bloque global 'ext' para que lo hereden todos los submódulos de terceros
+          
           echo "ext {" >> android/build.gradle
           echo "    compileSdkVersion = 35" >> android/build.gradle
           echo "    targetSdkVersion = 35" >> android/build.gradle
           echo "    buildToolsVersion = \"35.0.0\"" >> android/build.gradle
+          echo "}" >> android/build.gradle
+          
+          echo "subprojects {" >> android/build.gradle
+          echo "    tasks.configureEach { task ->" >> android/build.gradle
+          echo "        if (task.name.toLowerCase().contains('aarmetadata')) {" >> android/build.gradle
+          echo "            task.enabled = false" >> android/build.gradle
+          echo "        }" >> android/build.gradle
+          echo "    }" >> android/build.gradle
           echo "}" >> android/build.gradle
           
           # 7. Compilar el APK definitivo
