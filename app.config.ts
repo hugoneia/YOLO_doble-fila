@@ -108,10 +108,6 @@ const config: ExpoConfig = {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
           kotlinVersion: "1.9.24",
-          // INYECCIÓN DE LA SOLUCIÓN:
-          extraGradleProperties: {
-            "org.jetbrains.kotlin.suppressKotlinVersionCompatibilityCheck": "true"
-          }
         },
       },
     ],
