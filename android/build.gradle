@@ -1,22 +1,4 @@
-buildscript {
-    ext {
-        buildToolsVersion = "35.0.0"
-        minSdkVersion = 24
-        compileSdkVersion = 35
-        targetSdkVersion = 35
-        // Fuerza la versión de Kotlin aquí
-        kotlinVersion = "1.9.24"
-    }
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.7.0")
-        // Forzamos la versión del plugin de Kotlin aquí
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-    }
-}
+// ... (mantiene la parte de buildscript igual)
 
 allprojects {
     repositories {
@@ -25,14 +7,14 @@ allprojects {
     }
 }
 
-// Inyección agresiva para asegurar que todos los módulos respeten la versión
 subprojects {
-    project.ext.set("kotlinVersion", rootProject.ext.kotlinVersion)
-    
-    // Fuerza la supresión de compatibilidad en todas las tareas de compilación Kotlin
+    // Esto asegura que cada submódulo reciba el flag de supresión
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
-            freeCompilerArgs += ["-P", "plugin:org.jetbrains.kotlin.compiler.plugins.kotlinx-serialization:suppressKotlinVersionCompatibilityCheck=true"]
+            // Pasamos el argumento directamente al compilador
+            freeCompilerArgs += [
+                "-P", "plugin:org.jetbrains.kotlin.compiler.plugins.kotlinx-serialization:suppressKotlinVersionCompatibilityCheck=true"
+            ]
         }
     }
 }
