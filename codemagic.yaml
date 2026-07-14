@@ -52,15 +52,19 @@ workflows:
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Forzar compileSdkVersion a 35 en todos los subproyectos (evita fallos de AarMetadata de raíz)
+          # 6b. Forzar compileSdkVersion a 35 mediante hooks de plugins (evita fallos de AarMetadata y afterEvaluate)
           echo "🛠️ Parcheando build.gradle para forzar compilación en Android 15 (API 35)..."
           echo "subprojects {" >> android/build.gradle
-          echo "    afterEvaluate { project ->" >> android/build.gradle
-          echo "        if (project.hasProperty('android')) {" >> android/build.gradle
-          echo "            project.android {" >> android/build.gradle
-          echo "                compileSdkVersion 35" >> android/build.gradle
-          echo "                buildToolsVersion '35.0.0'" >> android/build.gradle
-          echo "            }" >> android/build.gradle
+          echo "    plugins.withId('com.android.application') {" >> android/build.gradle
+          echo "        android {" >> android/build.gradle
+          echo "            compileSdkVersion 35" >> android/build.gradle
+          echo "            buildToolsVersion '35.0.0'" >> android/build.gradle
+          echo "        }" >> android/build.gradle
+          echo "    }" >> android/build.gradle
+          echo "    plugins.withId('com.android.library') {" >> android/build.gradle
+          echo "        android {" >> android/build.gradle
+          echo "            compileSdkVersion 35" >> android/build.gradle
+          echo "            buildToolsVersion '35.0.0'" >> android/build.gradle
           echo "        }" >> android/build.gradle
           echo "    }" >> android/build.gradle
           echo "}" >> android/build.gradle
