@@ -2,7 +2,6 @@
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-// Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 const rawBundleId = "com.app.TrafficMonitorMVP";
 const bundleId =
   rawBundleId
@@ -108,7 +107,11 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
-          kotlinVersion: "1.9.24", 
+          kotlinVersion: "1.9.24",
+          // INYECCIÓN DE LA SOLUCIÓN:
+          extraGradleProperties: {
+            "org.jetbrains.kotlin.suppressKotlinVersionCompatibilityCheck": "true"
+          }
         },
       },
     ],
