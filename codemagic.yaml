@@ -14,17 +14,14 @@ workflows:
     scripts:
       - name: Configurar Entorno y Compilar APK
         script: |
-          # 1. Crear el script fantasma de MANUS
           mkdir -p scripts
-          echo "// Archivo temporal" > scripts/load-env.js
-          
-          # 2. Configurar Yarn 4
+          echo "// Bypass" > scripts/load-env.js
           corepack enable
           yarn config set nodeLinker node-modules
           touch yarn.lock
           yarn install --no-immutable
           
-          # 3. Parche de Nitro
+          # Parche de Nitro
           cat << 'EOF' > patch-nitro.js
           const fs = require('fs');
           const p = 'node_modules/react-native-nitro-modules/android/src/main/kotlin/com/margelo/nitro/NitroModulesPackage.kt';
@@ -35,39 +32,29 @@ workflows:
           EOF
           node patch-nitro.js
           
-          # 4. React Compiler
-          yarn add -D babel-plugin-react-compiler react-compiler-runtime
-          
-          # 5. Recursos visuales
-          node -e "const fs = require('fs'); ['assets/images', 'assets'].forEach(p => fs.mkdirSync(p, { recursive: true })); const dummy = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64'); ['android-icon-foreground.png', 'android-icon-background.png', 'android-icon-monochrome.png', 'splash-icon.png', 'adaptive-icon.png', 'icon.png'].forEach(f => fs.writeFileSync('assets/'+f, dummy));"
-          
-          # 6. Prebuild
           yarn run expo prebuild --platform android
           
-          # 7. Parche forzoso de versiones y resolución de dependencias
+          # Configuración de SDK y Desactivación de validaciones estrictas
           echo "android.compileSdkVersion=35" >> android/gradle.properties
           echo "android.targetSdkVersion=35" >> android/gradle.properties
           
-          echo "subprojects {
-              // FORZAR VERSION ESTABLE DE CAMERAX (Evita requerir SDK 36)
-              configurations.all {
-                  resolutionStrategy {
-                      eachDependency { details ->
-                          if (details.requested.group == 'androidx.camera' && details.requested.name.startsWith('camera-')) {
-                              details.useVersion '1.4.3'
-                          }
-                      }
-                  }
+          # Inyectar repositorio de Google y deshabilitar checkAarMetadata
+          # Esto permite que use las versiones que ya tiene (aunque sean alpha) sin abortar el build
+          echo "
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
               }
-              tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                  kotlinOptions { freeCompilerArgs += ['-P', 'plugin:org.jetbrains.kotlin.compiler.plugins.kotlinx-serialization:suppressKotlinVersionCompatibilityCheck=true'] }
-              }
+          }
+          subprojects {
               tasks.configureEach { task ->
-                  if (task.name.toLowerCase().contains('aarmetadata')) { task.enabled = false }
+                  if (task.name.toLowerCase().contains('aarmetadata')) {
+                      task.enabled = false
+                  }
               }
           }" >> android/build.gradle
           
-          # 8. Compilar
           cd android
           ./gradlew clean assembleRelease
           
