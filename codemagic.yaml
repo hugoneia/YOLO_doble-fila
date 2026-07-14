@@ -141,7 +141,7 @@ workflows:
           echo "    tasks.configureEach { task ->" >> android/build.gradle
           echo "        if (task.name.toLowerCase().contains('aarmetadata')) {" >> android/build.gradle
           echo "            task.enabled = false" >> android/build.gradle
-          } >> android/build.gradle
+          echo "        }" >> android/build.gradle
           echo "    }" >> android/build.gradle
           echo "}" >> android/build.gradle
           
