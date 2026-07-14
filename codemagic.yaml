@@ -52,17 +52,14 @@ workflows:
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Forzar versión de CameraX (estable 1.4.0 para estándar, 1.4.0-alpha01 para pipe experimental)
-          echo "🛠️ Parcheando build.gradle para fijar CameraX en versión estable..."
+          # 6b. Forzar compileSdkVersion a 35 en todos los subproyectos (evita fallos de AarMetadata de raíz)
+          echo "🛠️ Parcheando build.gradle para forzar compilación en Android 15 (API 35)..."
           echo "subprojects {" >> android/build.gradle
-          echo "    configurations.all {" >> android/build.gradle
-          echo "        resolutionStrategy.eachDependency { details ->" >> android/build.gradle
-          echo "            if (details.requested.group == 'androidx.camera') {" >> android/build.gradle
-          echo "                if (details.requested.name == 'camera-camera2-pipe') {" >> android/build.gradle
-          echo "                    details.useVersion '1.4.0-alpha01'" >> android/build.gradle
-          echo "                } else {" >> android/build.gradle
-          echo "                    details.useVersion '1.4.0'" >> android/build.gradle
-          echo "                }" >> android/build.gradle
+          echo "    afterEvaluate { project ->" >> android/build.gradle
+          echo "        if (project.hasProperty('android')) {" >> android/build.gradle
+          echo "            project.android {" >> android/build.gradle
+          echo "                compileSdkVersion 35" >> android/build.gradle
+          echo "                buildToolsVersion '35.0.0'" >> android/build.gradle
           echo "            }" >> android/build.gradle
           echo "        }" >> android/build.gradle
           echo "    }" >> android/build.gradle
