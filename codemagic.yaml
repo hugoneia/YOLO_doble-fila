@@ -52,13 +52,17 @@ workflows:
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Forzar versión estable de AndroidX CameraX (evita alphas que requieren API 36)
+          # 6b. Forzar versión de CameraX (estable 1.4.0 para estándar, 1.4.0-alpha01 para pipe experimental)
           echo "🛠️ Parcheando build.gradle para fijar CameraX en versión estable..."
           echo "subprojects {" >> android/build.gradle
           echo "    configurations.all {" >> android/build.gradle
           echo "        resolutionStrategy.eachDependency { details ->" >> android/build.gradle
           echo "            if (details.requested.group == 'androidx.camera') {" >> android/build.gradle
-          echo "                details.useVersion '1.4.0'" >> android/build.gradle
+          echo "                if (details.requested.name == 'camera-camera2-pipe') {" >> android/build.gradle
+          echo "                    details.useVersion '1.4.0-alpha01'" >> android/build.gradle
+          echo "                } else {" >> android/build.gradle
+          echo "                    details.useVersion '1.4.0'" >> android/build.gradle
+          echo "                }" >> android/build.gradle
           echo "            }" >> android/build.gradle
           echo "        }" >> android/build.gradle
           echo "    }" >> android/build.gradle
