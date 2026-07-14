@@ -29,113 +29,99 @@ workflows:
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 3b. PARCHE INTELIGENTE: Corregir firmas obsoletas de ReactModuleInfo en caliente
-          echo "🩹 Iniciando parche dinámico de código nativo..."
+          # 3b. PARCHE INTELIGENTE Y OPTIMIZADO: Corregir firmas obsoletas de ReactModuleInfo en caliente
+          echo "🩹 Iniciando parche dinámico y optimizado de código nativo..."
           cat << 'EOF' > patch-react-module-info.js
           const fs = require('fs');
           const path = require('path');
 
-          function cleanComments(str) {
-            return str.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
-          }
-
-          function patchFile(filePath) {
+          function patchKotlinFile(filePath) {
             let content = fs.readFileSync(filePath, 'utf8');
-            let index = 0;
-            let modified = false;
+            // Detecta ReactModuleInfo sin importar saltos de línea, espacios ni tabulaciones
+            const regex = /ReactModuleInfo\s*\(([\s\S]*?)\)/g;
+            let matchFound = false;
 
-            while (true) {
-              index = content.indexOf('ReactModuleInfo(', index);
-              if (index === -1) break;
+            const updatedContent = content.replace(regex, (match, argsStr) => {
+              // Limpiar comentarios internos de Kotlin (// o /* */) para contar argumentos de forma limpia
+              let cleanArgsStr = argsStr
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/\/\/.*$/gm, '')
+                .replace(/\s+/g, ' ');
 
-              let parenCount = 1;
-              let endOffset = index + 'ReactModuleInfo('.length;
-              let insideString = false;
-              let escape = false;
+              const args = cleanArgsStr.split(',').map(a => a.trim()).filter(Boolean);
 
-              while (parenCount > 0 && endOffset < content.length) {
-                let char = content[endOffset];
-                if (char === '"' && !escape) {
-                  insideString = !insideString;
-                }
-                if (char === '\\' && insideString) {
-                  escape = !escape;
-                } else {
-                  escape = false;
-                }
-
-                if (!insideString) {
-                  if (char === '(') parenCount++;
-                  if (char === ')') parenCount--;
-                }
-                endOffset++;
-              }
-
-              if (parenCount === 0) {
-                const fullCall = content.substring(index, endOffset);
-                const argsContent = fullCall.substring('ReactModuleInfo('.length, fullCall.length - 1);
-                const cleanedArgsStr = cleanComments(argsContent);
+              if (args.length === 7) {
+                matchFound = true;
+                console.log(`\n[PATCH] ¡Encontrado constructor obsoleto!`);
+                console.log(`[Ruta]: ${filePath}`);
+                console.log(`[Original]: ${match.replace(/\s+/g, ' ')}`);
                 
-                let args = [];
-                let currentArg = '';
-                let inQuotes = false;
+                // Eliminamos el 5º argumento (hasConstants) para adaptarlo a la firma moderna de 6 argumentos
+                args.splice(4, 1);
                 
-                for (let i = 0; i < cleanedArgsStr.length; i++) {
-                  let c = cleanedArgsStr[i];
-                  if (c === '"') inQuotes = !inQuotes;
-                  if (!inQuotes) {
-                    if (c === ',') {
-                      args.push(currentArg.trim());
-                      currentArg = '';
-                      continue;
-                    }
-                  }
-                  currentArg += c;
-                }
-                if (currentArg.trim() !== '') {
-                  args.push(currentArg.trim());
-                }
-
-                if (args.length === 7) {
-                  console.log(`-> Corrigiendo constructor obsoleto en: ${filePath}`);
-                  args.splice(4, 1); // Eliminamos el parámetro 'hasConstants' (índice 4) para pasar a 6 argumentos
-                  const newCall = `ReactModuleInfo(${args.join(', ')})`;
-                  content = content.substring(0, index) + newCall + content.substring(endOffset);
-                  modified = true;
-                  index += newCall.length;
-                } else {
-                  index = endOffset;
-                }
-              } else {
-                break;
+                const replacement = `ReactModuleInfo(${args.join(', ')})`;
+                console.log(`[Corregido]: ${replacement}\n`);
+                return replacement;
               }
-            }
-
-            if (modified) {
-              fs.writeFileSync(filePath, content, 'utf8');
-              console.log(`✅ Archivo parcheado con éxito: ${filePath}`);
-            }
-          }
-
-          function walkDir(dir) {
-            if (!fs.existsSync(dir)) return;
-            fs.readdirSync(dir).forEach(f => {
-              let dirPath = path.join(dir, f);
-              if (fs.statSync(dirPath).isDirectory()) {
-                if (f !== 'build' && f !== '.cache' && f !== 'bin') {
-                  walkDir(dirPath);
-                }
-              } else {
-                if (dirPath.endsWith('.kt') || dirPath.endsWith('.java')) {
-                  patchFile(dirPath);
-                }
-              }
+              return match;
             });
+
+            if (matchFound) {
+              fs.writeFileSync(filePath, updatedContent, 'utf8');
+              console.log(`[PATCH] Cambios aplicados con éxito en el archivo.`);
+            }
           }
 
-          console.log('🔍 Buscando firmas incompatibles de ReactModuleInfo...');
-          walkDir('node_modules');
-          console.log('🎯 Reparación en caliente finalizada.');
+          function scanAndroidFolders(baseDir) {
+            if (!fs.existsSync(baseDir)) {
+              console.log(`[PATCH] El directorio ${baseDir} no existe.`);
+              return;
+            }
+            const modules = fs.readdirSync(baseDir);
+            for (const mod of modules) {
+              const modPath = path.join(baseDir, mod);
+              if (!fs.statSync(modPath).isDirectory()) continue;
+
+              // Manejar dependencias con scope (ej. @react-native)
+              if (mod.startsWith('@')) {
+                const subModules = fs.readdirSync(modPath);
+                for (const subMod of subModules) {
+                  const subModPath = path.join(modPath, subMod);
+                  if (fs.statSync(subModPath).isDirectory()) {
+                    checkAndScanAndroid(subModPath);
+                  }
+                }
+              } else {
+                checkAndScanAndroid(modPath);
+              }
+            }
+          }
+
+          function checkAndScanAndroid(modulePath) {
+            const androidPath = path.join(modulePath, 'android');
+            if (fs.existsSync(androidPath) && fs.statSync(androidPath).isDirectory()) {
+              walkAndPatch(androidPath);
+            }
+          }
+
+          function walkAndPatch(dir) {
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+              const fullPath = path.join(dir, file);
+              const stat = fs.statSync(fullPath);
+              if (stat.isDirectory()) {
+                if (file !== 'build' && file !== '.gradle') {
+                  walkAndPatch(fullPath);
+                }
+              } else if (file.endsWith('.kt') || file.endsWith('.java')) {
+                patchKotlinFile(fullPath);
+              }
+            }
+          }
+
+          console.log('🔍 Iniciando escaneo ultra-rápido de carpetas Android...');
+          scanAndroidFolders('node_modules');
+          console.log('🎯 Proceso de parcheo finalizado.');
           EOF
           node patch-react-module-info.js
           
