@@ -29,7 +29,7 @@ workflows:
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 3b. PARCHE DE PRECISIÓN QUIRÚRGICA: Modificación directa de NitroModulesPackage.kt
+          # 3b. PARCHE QUIRÚRGICO 1: Modificación directa de NitroModulesPackage.kt
           echo "🩹 Iniciando parche quirúrgico en NitroModulesPackage.kt..."
           cat << 'EOF' > patch-nitro.js
           const fs = require('fs');
@@ -65,11 +65,6 @@ workflows:
             console.log(`\n✅ Archivo encontrado en: ${filePath}`);
             const originalContent = fs.readFileSync(filePath, 'utf8');
             
-            console.log('\n--- 📂 CÓDIGO ORIGINAL EN NODE_MODULES ---');
-            console.log(originalContent);
-            console.log('-------------------------------------------\n');
-
-            // Reemplazamos quirúrgicamente cualquier llamada a ReactModuleInfo(...) por la versión limpia de 6 parámetros
             const patchedContent = originalContent.replace(/ReactModuleInfo\s*\([\s\S]*?\)/g, `ReactModuleInfo(
                 "NitroModules",
                 "com.margelo.nitro.NitroModulesPackage",
@@ -80,11 +75,7 @@ workflows:
             )`);
 
             fs.writeFileSync(filePath, patchedContent, 'utf8');
-            console.log('🎉 Parche aplicado en el archivo.');
-
-            console.log('\n--- 🛠️ CÓDIGO CORREGIDO LISTO PARA COMPILAR ---');
-            console.log(fs.readFileSync(filePath, 'utf8'));
-            console.log('-----------------------------------------------\n');
+            console.log('🎉 Parche de Nitro aplicado.');
           });
           EOF
           node patch-nitro.js
@@ -112,12 +103,34 @@ workflows:
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Configuración limpia de SDK para evitar fallos de versiones
+          # 6b. PARCHE QUIRÚRGICO 2: Alinear versiones de Kotlin y configurar SDK
           echo "🛠️ Parcheando build.gradle y gradle.properties..."
+          
+          # Forzar Kotlin 2.1.20 en gradle.properties para que todos los submódulos lo usen
+          echo "kotlinVersion=2.1.20" >> android/gradle.properties
           echo "android.compileSdkVersion=35" >> android/gradle.properties
           echo "android.targetSdkVersion=35" >> android/gradle.properties
           echo "android.buildToolsVersion=35.0.0" >> android/gradle.properties
           
+          # Usar un script de Node para reescribir de forma segura android/build.gradle
+          node -e "
+          const fs = require('fs');
+          if (fs.existsSync('android/build.gradle')) {
+            let content = fs.readFileSync('android/build.gradle', 'utf8');
+            
+            // Forzar kotlinVersion = '2.1.20' en el bloque ext
+            if (content.includes('kotlinVersion')) {
+              content = content.replace(/kotlinVersion\s*=\s*['\"][^'\"]+['\"]/g, 'kotlinVersion = \"2.1.20\"');
+            } else {
+              content = content.replace(/ext\s*\{/, 'ext {\n        kotlinVersion = \"2.1.20\"');
+            }
+            
+            fs.writeFileSync('android/build.gradle', content, 'utf8');
+            console.log('✅ Kotlin 2.1.20 forzado con éxito en build.gradle');
+          }
+          "
+          
+          # Añadir variables adicionales del SDK de Android al build.gradle
           echo "ext {" >> android/build.gradle
           echo "    compileSdkVersion = 35" >> android/build.gradle
           echo "    targetSdkVersion = 35" >> android/build.gradle
@@ -128,7 +141,7 @@ workflows:
           echo "    tasks.configureEach { task ->" >> android/build.gradle
           echo "        if (task.name.toLowerCase().contains('aarmetadata')) {" >> android/build.gradle
           echo "            task.enabled = false" >> android/build.gradle
-          echo "        }" >> android/build.gradle
+          } >> android/build.gradle
           echo "    }" >> android/build.gradle
           echo "}" >> android/build.gradle
           
