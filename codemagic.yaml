@@ -29,12 +29,122 @@ workflows:
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 4. Forzar la instalación del compilador de React y su runtime en el entorno de build
+          # 3b. PARCHE INTELIGENTE: Corregir firmas obsoletas de ReactModuleInfo en caliente
+          echo "🩹 Iniciando parche dinámico de código nativo..."
+          cat << 'EOF' > patch-react-module-info.js
+          const fs = require('fs');
+          const path = require('path');
+
+          function cleanComments(str) {
+            return str.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+          }
+
+          function patchFile(filePath) {
+            let content = fs.readFileSync(filePath, 'utf8');
+            let index = 0;
+            let modified = false;
+
+            while (true) {
+              index = content.indexOf('ReactModuleInfo(', index);
+              if (index === -1) break;
+
+              let parenCount = 1;
+              let endOffset = index + 'ReactModuleInfo('.length;
+              let insideString = false;
+              let escape = false;
+
+              while (parenCount > 0 && endOffset < content.length) {
+                let char = content[endOffset];
+                if (char === '"' && !escape) {
+                  insideString = !insideString;
+                }
+                if (char === '\\' && insideString) {
+                  escape = !escape;
+                } else {
+                  escape = false;
+                }
+
+                if (!insideString) {
+                  if (char === '(') parenCount++;
+                  if (char === ')') parenCount--;
+                }
+                endOffset++;
+              }
+
+              if (parenCount === 0) {
+                const fullCall = content.substring(index, endOffset);
+                const argsContent = fullCall.substring('ReactModuleInfo('.length, fullCall.length - 1);
+                const cleanedArgsStr = cleanComments(argsContent);
+                
+                let args = [];
+                let currentArg = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < cleanedArgsStr.length; i++) {
+                  let c = cleanedArgsStr[i];
+                  if (c === '"') inQuotes = !inQuotes;
+                  if (!inQuotes) {
+                    if (c === ',') {
+                      args.push(currentArg.trim());
+                      currentArg = '';
+                      continue;
+                    }
+                  }
+                  currentArg += c;
+                }
+                if (currentArg.trim() !== '') {
+                  args.push(currentArg.trim());
+                }
+
+                if (args.length === 7) {
+                  console.log(`-> Corrigiendo constructor obsoleto en: ${filePath}`);
+                  args.splice(4, 1); // Eliminamos el parámetro 'hasConstants' (índice 4) para pasar a 6 argumentos
+                  const newCall = `ReactModuleInfo(${args.join(', ')})`;
+                  content = content.substring(0, index) + newCall + content.substring(endOffset);
+                  modified = true;
+                  index += newCall.length;
+                } else {
+                  index = endOffset;
+                }
+              } else {
+                break;
+              }
+            }
+
+            if (modified) {
+              fs.writeFileSync(filePath, content, 'utf8');
+              console.log(`✅ Archivo parcheado con éxito: ${filePath}`);
+            }
+          }
+
+          function walkDir(dir) {
+            if (!fs.existsSync(dir)) return;
+            fs.readdirSync(dir).forEach(f => {
+              let dirPath = path.join(dir, f);
+              if (fs.statSync(dirPath).isDirectory()) {
+                if (f !== 'build' && f !== '.cache' && f !== 'bin') {
+                  walkDir(dirPath);
+                }
+              } else {
+                if (dirPath.endsWith('.kt') || dirPath.endsWith('.java')) {
+                  patchFile(dirPath);
+                }
+              }
+            });
+          }
+
+          console.log('🔍 Buscando firmas incompatibles de ReactModuleInfo...');
+          walkDir('node_modules');
+          console.log('🎯 Reparación en caliente finalizada.');
+          EOF
+          node patch-react-module-info.js
+          
+          # 4. Forzar la instalación del compilador de React y su runtime
           echo "⚛️ Forzando instalación de dependencias de React Compiler..."
           yarn add -D babel-plugin-react-compiler
           yarn add react-compiler-runtime
           
-          # 5. Inyectar todos los assets visuales requeridos (incluido el splash-icon)
+          # 5. Inyectar todos los assets visuales requeridos
           echo "🖼️ Asegurando recursos visuales mínimos para el Prebuild..."
           node -e "
           const fs = require('fs');
@@ -48,11 +158,11 @@ workflows:
           fs.writeFileSync('assets/icon.png', dummyPng);
           "
           
-          # 6. Generar la estructura nativa de Android de forma limpia
+          # 6. Generar la estructura nativa de Android
           echo "🏗️ Generando carpeta nativa de Android (Expo Prebuild)..."
           yarn run expo prebuild --platform android
           
-          # 6b. Forzar SDK 35 y desactivar la comprobación de metadatos AAR (evita bloqueos de API 36 de Google)
+          # 6b. Configuración limpia de SDK para evitar fallos de versiones
           echo "🛠️ Parcheando build.gradle y gradle.properties..."
           echo "android.compileSdkVersion=35" >> android/gradle.properties
           echo "android.targetSdkVersion=35" >> android/gradle.properties
@@ -83,7 +193,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - tu-email@ejemplo.com # <- Cambia esto por tu correo real si quieres recibir avisos
+          - tu-email@ejemplo.com
         notify:
           success: true
           failure: true
