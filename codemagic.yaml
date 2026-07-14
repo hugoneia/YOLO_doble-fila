@@ -29,101 +29,65 @@ workflows:
           echo "📦 Instalando dependencias del proyecto..."
           yarn install --no-immutable
           
-          # 3b. PARCHE INTELIGENTE Y OPTIMIZADO: Corregir firmas obsoletas de ReactModuleInfo en caliente
-          echo "🩹 Iniciando parche dinámico y optimizado de código nativo..."
-          cat << 'EOF' > patch-react-module-info.js
+          # 3b. PARCHE DE PRECISIÓN QUIRÚRGICA: Modificación directa de NitroModulesPackage.kt
+          echo "🩹 Iniciando parche quirúrgico en NitroModulesPackage.kt..."
+          cat << 'EOF' > patch-nitro.js
           const fs = require('fs');
           const path = require('path');
 
-          function patchKotlinFile(filePath) {
-            let content = fs.readFileSync(filePath, 'utf8');
-            // Detecta ReactModuleInfo sin importar saltos de línea, espacios ni tabulaciones
-            const regex = /ReactModuleInfo\s*\(([\s\S]*?)\)/g;
-            let matchFound = false;
-
-            const updatedContent = content.replace(regex, (match, argsStr) => {
-              // Limpiar comentarios internos de Kotlin (// o /* */) para contar argumentos de forma limpia
-              let cleanArgsStr = argsStr
-                .replace(/\/\*[\s\S]*?\*\//g, '')
-                .replace(/\/\/.*$/gm, '')
-                .replace(/\s+/g, ' ');
-
-              const args = cleanArgsStr.split(',').map(a => a.trim()).filter(Boolean);
-
-              if (args.length === 7) {
-                matchFound = true;
-                console.log(`\n[PATCH] ¡Encontrado constructor obsoleto!`);
-                console.log(`[Ruta]: ${filePath}`);
-                console.log(`[Original]: ${match.replace(/\s+/g, ' ')}`);
-                
-                // Eliminamos el 5º argumento (hasConstants) para adaptarlo a la firma moderna de 6 argumentos
-                args.splice(4, 1);
-                
-                const replacement = `ReactModuleInfo(${args.join(', ')})`;
-                console.log(`[Corregido]: ${replacement}\n`);
-                return replacement;
-              }
-              return match;
-            });
-
-            if (matchFound) {
-              fs.writeFileSync(filePath, updatedContent, 'utf8');
-              console.log(`[PATCH] Cambios aplicados con éxito en el archivo.`);
-            }
-          }
-
-          function scanAndroidFolders(baseDir) {
-            if (!fs.existsSync(baseDir)) {
-              console.log(`[PATCH] El directorio ${baseDir} no existe.`);
-              return;
-            }
-            const modules = fs.readdirSync(baseDir);
-            for (const mod of modules) {
-              const modPath = path.join(baseDir, mod);
-              if (!fs.statSync(modPath).isDirectory()) continue;
-
-              // Manejar dependencias con scope (ej. @react-native)
-              if (mod.startsWith('@')) {
-                const subModules = fs.readdirSync(modPath);
-                for (const subMod of subModules) {
-                  const subModPath = path.join(modPath, subMod);
-                  if (fs.statSync(subModPath).isDirectory()) {
-                    checkAndScanAndroid(subModPath);
-                  }
-                }
-              } else {
-                checkAndScanAndroid(modPath);
-              }
-            }
-          }
-
-          function checkAndScanAndroid(modulePath) {
-            const androidPath = path.join(modulePath, 'android');
-            if (fs.existsSync(androidPath) && fs.statSync(androidPath).isDirectory()) {
-              walkAndPatch(androidPath);
-            }
-          }
-
-          function walkAndPatch(dir) {
-            const files = fs.readdirSync(dir);
-            for (const file of files) {
-              const fullPath = path.join(dir, file);
-              const stat = fs.statSync(fullPath);
+          function findFile(dir, fileName) {
+            let results = [];
+            if (!fs.existsSync(dir)) return results;
+            const list = fs.readdirSync(dir);
+            for (const file of list) {
+              const filePath = path.join(dir, file);
+              const stat = fs.statSync(filePath);
               if (stat.isDirectory()) {
-                if (file !== 'build' && file !== '.gradle') {
-                  walkAndPatch(fullPath);
+                if (file !== 'build' && file !== '.gradle' && file !== '.git' && file !== '.cache') {
+                  results = results.concat(findFile(filePath, fileName));
                 }
-              } else if (file.endsWith('.kt') || file.endsWith('.java')) {
-                patchKotlinFile(fullPath);
+              } else if (file === fileName) {
+                results.push(filePath);
               }
             }
+            return results;
           }
 
-          console.log('🔍 Iniciando escaneo ultra-rápido de carpetas Android...');
-          scanAndroidFolders('node_modules');
-          console.log('🎯 Proceso de parcheo finalizado.');
+          console.log('🔍 Buscando NitroModulesPackage.kt en node_modules...');
+          const files = findFile('node_modules', 'NitroModulesPackage.kt');
+
+          if (files.length === 0) {
+            console.log('❌ Error crítico: No se encontró NitroModulesPackage.kt. ¿Se han instalado las dependencias?');
+            process.exit(1);
+          }
+
+          files.forEach(filePath => {
+            console.log(`\n✅ Archivo encontrado en: ${filePath}`);
+            const originalContent = fs.readFileSync(filePath, 'utf8');
+            
+            console.log('\n--- 📂 CÓDIGO ORIGINAL EN NODE_MODULES ---');
+            console.log(originalContent);
+            console.log('-------------------------------------------\n');
+
+            // Reemplazamos quirúrgicamente cualquier llamada a ReactModuleInfo(...) por la versión limpia de 6 parámetros
+            const patchedContent = originalContent.replace(/ReactModuleInfo\s*\([\s\S]*?\)/g, `ReactModuleInfo(
+                "NitroModules",
+                "com.margelo.nitro.NitroModulesPackage",
+                false,
+                false,
+                false,
+                true
+            )`);
+
+            fs.writeFileSync(filePath, patchedContent, 'utf8');
+            console.log('🎉 Parche aplicado en el archivo.');
+
+            console.log('\n--- 🛠️ CÓDIGO CORREGIDO LISTO PARA COMPILAR ---');
+            console.log(fs.readFileSync(filePath, 'utf8'));
+            console.log('-----------------------------------------------\n');
+          });
           EOF
-          node patch-react-module-info.js
+          node patch-nitro.js
           
           # 4. Forzar la instalación del compilador de React y su runtime
           echo "⚛️ Forzando instalación de dependencias de React Compiler..."
